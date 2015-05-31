@@ -82,7 +82,7 @@ abstract class API
 
 	private function _postHandler()
 	{
-		if($this->verb = "domains")
+		if($this->verb == "domains")
 		{
 			if(array_key_exists(0, $this->args) && !is_numeric($this->args[0]))
 			{
@@ -121,11 +121,15 @@ abstract class API
 			}
 				
 		}
+		else
+		{
+			throw new Exception("Error Processing Request", 1);
+		}
 	}
 
 	private function _getHandler()
 	{
-		if($this->verb = "domains")
+		if($this->verb == "domains")
 		{
 			if(array_key_exists(0, $this->args) && !is_numeric($this->args[0]))
 			{
@@ -168,63 +172,70 @@ abstract class API
 				}
 			}
 		}
+		else
+		{
+			throw new Exception("Error Processing Request", 1);
+		}
 	}
 
 	private function _putHandler()
 	{
-		if($this->verb = "domains")
+		if($this->verb == "domains")
+		{
+			if(array_key_exists(0, $this->args) && !is_numeric($this->args[0]))
 			{
-				if(array_key_exists(0, $this->args) && !is_numeric($this->args[0]))
+				$domain = array_shift($this->args);
+				$update = json_decode($this->file, true);
+				$update = $this->_cleanInputs($update);
+				$sql = "UPDATE `domain` SET";
+				$len = count($update);
+				$i = 1;
+				
+				foreach ($update as $key => $value) 
 				{
-					$domain = array_shift($this->args);
-					$update = json_decode($this->file, true);
-					$update = $this->_cleanInputs($update);
-					$sql = "UPDATE `domain` SET";
-					$len = count($update);
-					$i = 1;
-					
-					foreach ($update as $key => $value) 
+					$sql .= "`".$key."` = '".$value ."' ";	
+					if($i != $len)
 					{
-						$sql .= "`".$key."` = '".$value ."' ";	
-						if($i != $len)
-						{
-							$sql .= ", ";
-						}
-						$i++;
+						$sql .= ", ";
 					}
-					$sql .= "WHERE `domain` = '$domain'";
-					echo $sql;
-					if(!$this->con->query($sql))
-					{
-						throw new Exception("Error Processing Request", 1);
-					}
-
-					if($stmt = $this->con->prepare("SELECT `domain`,`startDate`,`contractTerm`,`montlyPrice` FROM `domain` WHERE `domain` = ?"))
-					{
-						$stmt->bind_param("s",$domain);
-						$stmt->execute();
-						$stmt->bind_result($domain,$startDate,$contractTerm,$montlyPrice);
-						$stmt->store_result();
-						if($stmt->num_rows > 0)
-						{
-							$stmt->fetch();
-							$domain = array("domain"=>$domain,"startDate"=>$startDate,"contractTerm"=>$contractTerm,"montlyPrice"=>$montlyPrice);
-							$domains = array("domain" => $domain);
-							$this->json = json_encode($domains);
-						}
-						else
-						{	$this->_response(404);
-							throw new Exception("Domain not found", 1);
-						}
-					}
-
+					$i++;
 				}
-				else
+				$sql .= "WHERE `domain` = '$domain'";
+				if(!$this->con->query($sql))
 				{
-					$this->_response(404);
-					throw new Exception("No domain provided", 1);	
+					throw new Exception("Error Processing Request", 1);
 				}
+
+				if($stmt = $this->con->prepare("SELECT `domain`,`startDate`,`contractTerm`,`montlyPrice` FROM `domain` WHERE `domain` = ?"))
+				{
+					$stmt->bind_param("s",$domain);
+					$stmt->execute();
+					$stmt->bind_result($domain,$startDate,$contractTerm,$montlyPrice);
+					$stmt->store_result();
+					if($stmt->num_rows > 0)
+					{
+						$stmt->fetch();
+						$domain = array("domain"=>$domain,"startDate"=>$startDate,"contractTerm"=>$contractTerm,"montlyPrice"=>$montlyPrice);
+						$domains = array("domain" => $domain);
+						$this->json = json_encode($domains);
+					}
+					else
+					{	$this->_response(404);
+						throw new Exception("Domain not found", 1);
+					}
+				}
+
 			}
+			else
+			{
+				$this->_response(404);
+				throw new Exception("No domain provided", 1);	
+			}
+		}
+		else
+		{
+			throw new Exception("Error Processing Request", 1);
+		}
 	}
 
 	public function _cleanInputs($data)
